@@ -1,0 +1,13 @@
+awscliv2.zip
+aws
+ec2_instance/terraform.tfstate.backup
+ec2_instance/terraform.tfstate
+ec2_instance/ec2-key.pub
+ec2_instance/ec2-key
+ec2_instance/.terraform.lock.hcl
+ec2_instance/.terraform
+cloud-native-monitoring-app/.terraform
+cloud-native-monitoring-app/.terraform.lock.hcl
+cloud-native-monitoring-app/terraform.tf
+cloud-native-monitoring-app
+ec2_instance/variables.tf
