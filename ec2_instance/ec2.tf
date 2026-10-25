@@ -60,7 +60,7 @@ resource "aws_instance" "my_instance" {
   ami = "ami-091138d0f0d41ff90"
 
   root_block_device {
-    volume_size = ec2_root_storage_size
+    volume_size = var.ec2_root_storage_size
     volume_type = "gp3"
   }
 
