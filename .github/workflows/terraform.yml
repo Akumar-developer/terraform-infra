@@ -1,4 +1,56 @@
 
+# name: Terraform CI/CD
+
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - "ec2_instance/**"
+#       - ".github/workflows/terraform.yml"
+#   workflow_dispatch:
+
+# permissions:
+#   id-token: write
+#   contents: read
+
+# jobs:
+#   terraform:
+#     name: Terraform
+#     runs-on: ubuntu-latest
+
+#     defaults:
+#       run:
+#         working-directory: ec2_instance
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+#           aws-region: us-east-1
+
+#       - name: Verify AWS identity
+#         run: aws sts get-caller-identity
+
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+
+#       # - name: Terraform Format Check
+#       #   run: terraform fmt -check -recursive
+
+#       - name: Terraform Init
+#         run: terraform init
+
+#       - name: Terraform Validate
+#         run: terraform validate
+
+
+
+
 name: Terraform CI/CD
 
 on:
@@ -14,9 +66,13 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: terraform-ec2-infrastructure
+  cancel-in-progress: false
+
 jobs:
-  terraform:
-    name: Terraform
+  terraform-plan:
+    name: Terraform Plan
     runs-on: ubuntu-latest
 
     defaults:
@@ -33,14 +89,13 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      - name: Verify AWS identity
-        run: aws sts get-caller-identity
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.4"
 
-      # - name: Terraform Format Check
-      #   run: terraform fmt -check -recursive
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
 
       - name: Terraform Init
         run: terraform init
@@ -49,4 +104,53 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -input=false
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: ec2_instance/tfplan
+          retention-days: 1
+          if-no-files-found: error
+
+  terraform-apply:
+    name: Terraform Apply
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    environment: production
+
+    defaults:
+      run:
+        working-directory: ec2_instance
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: ec2_instance
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.11.4"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -input=false -auto-approve tfplan
+
+
+#       - name: Terraform Plan
+#         run: terraform plan -input=false
